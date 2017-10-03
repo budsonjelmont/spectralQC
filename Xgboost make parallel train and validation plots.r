@@ -1,6 +1,6 @@
 # Reads in all 4 accuracy datasets and their assigned labels (0 = inaccurate, 1 = accurate). Trains a gradient-boosted tree
 # on the 10X vs. 3X datasets and simultaneously tests the tree against each of the other 3 datasets at each iteration,
-# then plots the error obtained for each dataset as a function of the iteration number.
+# then plots the AUC @ 5% FPR obtained for each dataset as a function of the iteration number.
 
 library(xgboost)
 
@@ -41,7 +41,7 @@ dALL = xgb.DMatrix(data = data.matrix(datALL[,-1]), label = data.matrix(datALL[,
   
 watchlist = list(train = dtrain, test10to1 = d10to1, test3to1 = d3to1, testALL = dALL)
 
-# function to get partial AUC for select refion of ROC curve bounded by specific FPRs. Modified from AUC::auc.
+# function to get partial AUC for select region of ROC curve bounded by specific FPRs. Modified from AUC::auc.
 getPartialAUC = function (x, min = 0, max = 1) 
 {
   fprs = c()

@@ -79,7 +79,7 @@ xgb.model = xgb.train(data = dtrain,
                       colsample_bytree = 0.7,
                       gamma = 0.9,
                       #seed = 1,
-                      eval_metric = AUC05FPR,  #can be one of 'error', 'auc', etc...
+                      eval_metric = AUC05FPR,  #can be one of 'error', 'auc', etc, or a user-defined custom function, as shown here.
                       objective = "binary:logistic",
                       nthread = 3,
                       watchlist = watchlist,

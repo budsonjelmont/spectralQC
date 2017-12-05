@@ -1,12 +1,18 @@
 # Reads in all 4 accuracy datasets and their assigned labels (0 = inaccurate, 1 = accurate). Trains a gradient-boosted tree
-# on the 10X vs. 3X datasets and simultaneously tests the tree against each of the other 3 datasets at each iteration,
-# then plots the AUC @ 5% FPR obtained for each dataset as a function of the iteration number.
+# on the 10X vs. 3X datasets and simultaneously tests the tree against each of the other 3 datasets at each iteration of 
+# gradient boosting, then plots the AUC @ 5% FPR for each dataset as a function of nrounds of boosting.
+# This is used to determine the point at which overfitting occurs so that an appropriate # of boosting rounds can be chosen.
+#	Inputs: 4 csvs--10to3.csv, 10to1.csv, 3to1.csv, and all.csv--containing accuracy classifications and measured QC metrics for every peptide in the given ratio comparison
+#	Outputs: Two ggplots (must be saved manually):
+#     -line chart of AUC @ 0.05 FPR vs boosting round for each of the 4 ratio comparison sets
+#     -bar graph showing the contribution of each QC metric to the final trained model
 
 library(xgboost)
+library(ggplot2)
 
 setwd('C:/Users/Judson/Documents/QC metrics/1.5-2-5-10-fold')
 
-#read and reformat data  
+# Read and reformat data -- training data first  
 traindat = read.table('10to3.csv',header=TRUE,sep=",")
 traindat = traindat[,!names(traindat) %in% c("FoldDiff","Accuracy10","Accuracy2","Accuracy1.5","pArea")]
   
@@ -14,7 +20,7 @@ traindatlist = list()
 traindatlist[['data']] = data.matrix(traindat[,-1])
 traindatlist[['label']] = data.matrix(traindat[,1])
 
-
+# Now get the remaining 3 test datasets 
 dat10to1 = read.table('10to1.csv',header=TRUE,sep=",")
 dat10to1 = dat10to1[,!names(dat10to1) %in% c("FoldDiff","Accuracy10","Accuracy2","Accuracy1.5","pArea")]
 dat3to1 = read.table('3to1.csv',header=TRUE,sep=",")
@@ -32,8 +38,7 @@ datALLlist = list()
 datALLlist[['data']] = data.matrix(datALL[,-1])
 datALLlist[['label']] = data.matrix(datALL[,1])  
 
-
-#Make watchlist of train and test data matrices
+# Make watchlist of train and test data matrices
 dtrain = xgb.DMatrix(data = data.matrix(traindat[,-1]), label = data.matrix(traindat[,1]))
 d10to1 = xgb.DMatrix(data = data.matrix(dat10to1[,-1]), label = data.matrix(dat10to1[,1]))
 d3to1 = xgb.DMatrix(data = data.matrix(dat3to1[,-1]), label = data.matrix(dat3to1[,1]))
@@ -41,7 +46,7 @@ dALL = xgb.DMatrix(data = data.matrix(datALL[,-1]), label = data.matrix(datALL[,
   
 watchlist = list(train = dtrain, test10to1 = d10to1, test3to1 = d3to1, testALL = dALL)
 
-# function to get partial AUC for select region of ROC curve bounded by specific FPRs. Modified from AUC::auc.
+# Function to get partial AUC for select refion of ROC curve bounded by specific FPRs. Modified from AUC::auc.
 getPartialAUC = function (x, min = 0, max = 1) 
 {
   fprs = c()
@@ -74,19 +79,20 @@ AUC05FPR = function(preds, dtrain) {
 xgb.model = xgb.train(data = dtrain,
                       eta = 0.01,
                       max_depth = 9, 
-                      nround = 2500, 
+                      nround = 2000, 
                       subsample = 0.5,
                       colsample_bytree = 0.7,
-                      gamma = 0.9,
+                      min_child_weight = 4,
+                      gamma = 0.95,
                       #seed = 1,
-                      eval_metric = AUC05FPR,  #can be one of 'error', 'auc', etc, or a user-defined custom function, as shown here.
+                      eval_metric = AUC05FPR,  # Can be one of 'error', 'auc', etc, or a user-defined custom function, as shown here.
                       objective = "binary:logistic",
                       nthread = 3,
                       watchlist = watchlist,
                       verbose = 1
 )
 
-#Plot outcome
+# Plot outcome
 eval = xgb.model$evaluation_log
 evaldat = data.frame(AUC05FPR = c(eval$train_AUC05FPR, eval$test10to1_AUC05FPR, eval$test3to1_AUC05FPR, eval$testALL_AUC05FPR))
 evaldat$Data = c(rep('Train_10to3', length(eval$train_AUC05FPR)), rep('Test_10to1', length(eval$test10to1_AUC05FPR)),
@@ -101,3 +107,7 @@ ggplot(evaldat, aes(x=Iteration, y=AUC05FPR, group=Data)) +
   geom_line(aes(y=AUC05FPR, color=Data, group=Data), size=0.85) +
   scale_x_continuous(breaks=seq(0,maxiter,by=200), limits=c(0,maxiter), labels=seq(0,maxiter,by=200)) +
   scale_y_continuous(breaks=seq(0,maxyax,by=0.01), limits=c(0,maxyax), labels=seq(0,maxyax,by=0.01))
+
+# View contributions of each variable to the final model
+importance = xgb.importance(model=xgb.model)
+xgb.plot.importance(importance_matrix = importance, measure = 'Gain', cex=1.5, plot=TRUE) # measure can be one of 'Gain','Weight', or 

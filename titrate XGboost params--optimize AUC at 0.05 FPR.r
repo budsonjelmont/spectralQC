@@ -1,4 +1,4 @@
-#Given a set of XGB model params passed in as a grid (provided by the caret package), train the model
+#Given a set of XGB model params passed in as a grid (provided by the caret package), this script trains the model
 #using each combination of params and performs cross-validation. Then creates 3 output text files for the user
 #to compare the performance of each model
 #

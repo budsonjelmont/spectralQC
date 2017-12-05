@@ -4,9 +4,9 @@
 #
 #Input: training set data with accuracy labels (e.g. the '10to3.csv' file in '\\proteome\Judson\2_Projects\QC metrics\XGB parameter optimization\1.5-2-5-10-fold-difference as accuracy threshold')
 #Output: the following 3 text files:
-#			xgb_train.txt: general summary of model performance for each XGB parameter combination in the grid
+#			xgb_train.txt: general summary of model performance for each XGB parameter combination in the grid sorted on AUC
 #			xgb_train.pred.txt: complete list of predicted & observed values in all the CV test sets for each combination of test SICs & XGB parameter combinations in the grid
-#			xgb_trainresultsAUCs.txt: summary of AUCs @ 4 FPR thresholds (1%, 5%, 10%, 100%) for each XGB parameter combination in the grid
+#			xgb_trainresultsAUCs.txt: summary of AUCs @ 4 FPR thresholds (1%, 5%, 10%, 100%) for each XGB parameter combination in the grid sorted on AUC @ 0.05 FPR
 
 library(xgboost)
 library(caret)
